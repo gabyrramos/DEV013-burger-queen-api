@@ -1,5 +1,24 @@
+const users = require("../routes/users")
+
 module.exports = {
-  getUsers: (req, resp, next) => {
-    // TODO: Implement the necessary function to fetch the `users` collection or table
+  createUser: (req, resp, next)=>{
+
   },
-};
+  
+  getUser: (req, resp, next) => async {  //AQUI MANEJAMOS EL CRUD
+    // TODO: Implement the necessary function to fetch the `users` collection or table
+   const users = await users.find();
+   resp.json(users)
+  },
+
+  updateUser: (req, resp, next) => {  //AQUI MANEJAMOS EL CRUD
+    // TODO: Implement the necessary function to fetch the `users` collection or table
+  
+  },
+
+  deleteUser: (req, resp, next) => {  //AQUI MANEJAMOS EL CRUD
+    // TODO: Implement the necessary function to fetch the `users` collection or table
+  
+  },
+
+  },

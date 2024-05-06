@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 
 module.exports = (secret) => (req, resp, next) => {
   const { authorization } = req.headers;
-
   if (!authorization) {
     return next();
   }
@@ -17,9 +16,8 @@ module.exports = (secret) => (req, resp, next) => {
     if (err) {
       return next(403);
     }
-
-    // TODO: Verify user identity using `decodeToken.uid`
   });
+// TODO: Verify user identity using `decodeToken.uid`
 };
 
 module.exports.isAuthenticated = (req) => (

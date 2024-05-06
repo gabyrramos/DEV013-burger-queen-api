@@ -20,8 +20,9 @@
     "@shelf/jest-mongodb": "^4.1.7",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.19.0",
-    "express": "^4.17.1",
+    "express": "^4.19.2",
     "jsonwebtoken": "^8.5.1",
+    "mongodb": "6.5",
     "mongodb-memory-server": "^8.12.2"
   },
   "devDependencies": {

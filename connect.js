@@ -7,8 +7,8 @@ async function connect() {
   try {
     await client.connect();
 
-    const db = client.db('BurgerQueenAPI'); // Reemplaza <NOMBRE_DB> por el nombre del db
-    return db;
+    const database = client.db('BurgerQueenAPI'); // Reemplaza <NOMBRE_DB> por el nombre del db
+    return database;
   } catch (error) {
     console.log('Error');
   }

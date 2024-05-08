@@ -13,10 +13,11 @@ module.exports = (app, nextMain) => {
       return next(400);
     }
     // TODO: Authenticate the user
-    const database = connect();
-    const collection = database.collection('users');
 
     try {
+      const database = connect();
+      const collection = database.collection('users');
+
       const user = collection.findOne({ email });
       if (!user) {
         return resp.status(404).send('Email o password incorrectos');
@@ -29,7 +30,7 @@ module.exports = (app, nextMain) => {
       const token = jwt.sign({ id: user._id, email: user.email }, secret, { expiresIn: '1h' });
       resp.json({ token });
     } catch (error) {
-      console.error('Error al hacer login', error);
+      console.error(error);
       return next(500);
     }
   });

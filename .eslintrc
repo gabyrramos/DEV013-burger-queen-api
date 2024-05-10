@@ -5,7 +5,8 @@
   },
   "parserOptions": {
     "ecmaVersion": 2018
-  },
+  }, 
+  "eslint linebreak-style": ["error", "windows"],
   "rules": {
     "no-underscore-dangle": "off",
     "consistent-return": "off",

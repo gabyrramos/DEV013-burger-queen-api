@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const { secret } = require('../config');
 
 module.exports = (secret) => (req, resp, next) => {
   const { authorization } = req.headers;
@@ -17,40 +16,40 @@ module.exports = (secret) => (req, resp, next) => {
     if (err) {
       return next(403);
     }
+    console.log('aqui el decoded token', decodedToken);
+    req.uid = decodedToken._id;
+    console.log(req.uid);
   });
   // TODO: Verify user identity using `decodeToken.uid`
-  const decodedToken = jwt.verify(token, secret);
-  const tokenUserID = decodedToken.uid;
-  if (!tokenUserID) {
-    return resp.send('Id incorrecto');
-  }
+  //const decodedToken = jwt.verify(token, secret);
+  // if (!tokenUserID) {
+  //   return resp.send('Id incorrecto');
+  // }
   next();
 };
 
-module.exports.isAuthenticated = (req, res, next) => {
-  const token = req.headers.authorization;
-
+module.exports.isAuthenticated = (req) => {
+  console.log(req.id)
+  return req.uid ? true : false;
   // TODO: Decide based on the request information whether the user is authenticated
-  if (!token) {
-    return res.status(401).send('Error, no hay token');
-  }
-  try {
-    const tokenVerified = jwt.verify(token, secret);
-    req.user = tokenVerified;
+  // if (!token) {
+  //   return res.status(401).send('Error, no hay token');
+  // }
 
-    next();
-} catch (error) {
-    return res.status(401).send('Error al validar token');
-  }
+//   try {
+//     const tokenVerified = jwt.verify(token, secret);
+//     req.user = tokenVerified;
+
+//     next();
+// } catch (error) {
+//     return res.status(401).send('Error al validar token');
+//   }
 };
 
 module.exports.isAdmin = (req, res, next) => {
   // TODO: Decide based on the request information whether the user is an admin
-  const { role } = req.user;
-  if (role !== 'admin') {
-    return res.status(403).send('Not authorized');
-  }
-  next();
+  //const { role } = req.user;
+  return req.role === "admin" ? true : false;
 };
 
 module.exports.requireAuth = (req, resp, next) => (

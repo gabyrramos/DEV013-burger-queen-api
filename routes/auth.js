@@ -6,28 +6,31 @@ const { connect } = require('../connect');
 const { secret } = config;
 
 module.exports = (app, nextMain) => {
-  app.post('/login', (req, resp, next) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return next(400);
-    }
+  app.post('/login', async (req, resp, next) => {
+   
     // TODO: Authenticate the user
 
     try {
-      const database = connect();
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return resp.status(400).send('No existe contraseña ni email');
+      }
+
+      const database = await connect();
       const collection = database.collection('users');
 
-      const user = collection.findOne({ email });
+      const user = await collection.findOne({ email });
+      console.log('router user', user);
       if (!user) {
         return resp.status(404).send('Email o password incorrectos');
       }
-      const passwordMatch = bcrypt.compare(password, user.password);
+      const passwordMatch = await bcrypt.compare(password, user.password);
       if (!passwordMatch) {
         return resp.status(404).send('Email o password incorrectos');
       }
       // If they match, send an access token created with JWT
-      const token = jwt.sign({ id: user._id, email: user.email }, secret, { expiresIn: '1h' });
+      const token = jwt.sign({ id: user._id, email: user.email, role: user.roles}, secret );
       resp.json({ token });
     } catch (error) {
       console.error(error);

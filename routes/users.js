@@ -2,7 +2,9 @@ const bcrypt = require('bcrypt');
 
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
-const { createUser, getUser, updateUser, deleteUser } = require('../controller/users');
+const {
+  createUser, getUser, updateUser, deleteUser,
+} = require('../controller/users');
 
 const { connect } = require('../connect');
 

@@ -20,11 +20,7 @@ module.exports = (secret) => (req, resp, next) => {
     req.uid = decodedToken._id;
     console.log(req.uid);
   });
-  // TODO: Verify user identity using `decodeToken.uid`
-  //const decodedToken = jwt.verify(token, secret);
-  // if (!tokenUserID) {
-  //   return resp.send('Id incorrecto');
-  // }
+
   next();
 };
 
@@ -32,18 +28,7 @@ module.exports.isAuthenticated = (req) => {
   console.log(req.id)
   return req.uid ? true : false;
   // TODO: Decide based on the request information whether the user is authenticated
-  // if (!token) {
-  //   return res.status(401).send('Error, no hay token');
-  // }
 
-//   try {
-//     const tokenVerified = jwt.verify(token, secret);
-//     req.user = tokenVerified;
-
-//     next();
-// } catch (error) {
-//     return res.status(401).send('Error al validar token');
-//   }
 };
 
 module.exports.isAdmin = (req, res, next) => {

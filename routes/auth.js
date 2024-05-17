@@ -30,7 +30,7 @@ module.exports = (app, nextMain) => {
         return resp.status(404).send('Email o password incorrectos');
       }
       // If they match, send an access token created with JWT
-      const token = jwt.sign({ id: user._id, email: user.email, role: user.roles}, secret );
+      const token = jwt.sign({ id: user._id, email: user.email, role: user.role}, secret );
       resp.json({ token });
     } catch (error) {
       console.error(error);

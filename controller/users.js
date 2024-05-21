@@ -2,26 +2,12 @@ const users = require("../routes/users")
 bycrypt = require('bcrypt');
 const { connect } = require('../connect');
 const { Collection } = require("mongodb");
+const { adminEmail } = require("../config");
 
 
 
-// ✅1- AQUI VAMOS A ACCEDER PRIMERO A LA BASE DE DATOS 
-// ✅2- LUEGO VAMOS A ACCERDER CON UN TRY AND CATCH - TRY A LOS DIFFERENTES VERIFICACIONES Y LUEGO CATCH PARA EL ERROR
-// dentro de try:
-// ✅2.1 lo que queremos es ver que primero el req que se hace es para crear un admin 
-// ✅2.2 entonces revisamos el rol
-//✅ 2.3 si no coincide entonces creamos un usuario 
-//✅2.4 ahi vamos a darle un formato para crear un id, email, password, role
-// 3. despues de hacer esto, podemos revisar otros detalles como por ejm
-//3.1 para crear un usuario debe cumplir ciertas caracteristicas
-//3.2 que el email sea valido
-//3.3 sino es un error
-//✅3.4 que la contrasena sea mas de 4 caracteres
-//✅3.5 sino es un error
-//✅3.6 que el email no se haya usado antes
-//✅3.7 sino es un error 
-// 4 despues hacemos un error por si nada funciona
 module.exports = {
+
   postUser: async (req, resp, next) => {
     try {
       const { email, password, role } = req.body
@@ -66,16 +52,37 @@ module.exports = {
   },
 
   getUser: async (req, resp, next) => {
-    try {
+      const db = await connect();
+      const page = req.query.page || 0;
+      const userPerPage = 10;
+      let users = []
+      db.collection('users')
+      .find()
+      .sort({ id: 1 })
+      .skip(page * userPerPage)
+      .limit(userPerPage)
+      .forEach(user => users.push(user))
+      .then(() =>{
+        resp.status(200).json(users)
+      })
+      .catch(() => {
+      resp.status(500).send('Algo salio mal');
+    })
+  },
+
+  getUserAdmin: async (req, res, next) =>{
+    try{
       const db = await connect();
       const usersCollection = db.collection('users');
-      const users = await usersCollection.find().toArray();
-      resp.json(users);
-    } catch (error) {
-      console.error('Error:', error);
-      return resp.status(500).send('Error al obtener usuarios');
+      const users = await usersCollection.find();   
+       if (!adminEmail) {
+        return res.status()
+       }
+      
+        }catch (error) {
+      return resp.status(500).send("Error, algo paso, intente de nuevo");
     }
-  },
+  }
 
   updateUser: (req, resp, next) => {  //AQUI MANEJAMOS EL CRUD
     // TODO: Implement the necessary function to fetch the `users` collection or table

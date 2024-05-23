@@ -120,15 +120,35 @@ module.exports = {
     }
   },
 
-  updateUser: (req, resp, next) => {  //AQUI MANEJAMOS EL CRUD
+  updateUser: async (req, resp, next) => {  //AQUI MANEJAMOS EL CRUD
     // TODO: Implement the necessary function to fetch the `users` collection or table
       //acceder a la base datos
       //acceder a la collection
-      // acceder a los parametros con los roles o IDS?
+      // acceder a los parametros con los roles o IDs?
+      //validar el input 
+      //autenticar y autorizar segun el id. 
       //digamos que quiero actualizar el email de una usuaria, 
-      //entonces accedo a ese correo
-      //y despues inserto el cambio 
-      //y lo guardo??
+      //encontrar el usuario por ID
+      //actualizar el usuario info 
+      //handle responde
+    try {
+      const db = await connect();
+      const usersCollection = db.collection('users');
+      const uid = req.params.id;
+      const { email, password, role } = req.body;
+      const authUser = req.user;
+
+
+    if (id !== newUserData) {
+      return res.send('Error, no coinciden los datos')
+    } 
+    return newUserData.isAuthenticated
+
+     
+    } catch (error) {
+      
+    }
+     
 
   },
 

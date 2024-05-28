@@ -1,48 +1,41 @@
-const users = require("../routes/users")
-bycrypt = require('bcrypt');
+const bcrypt = require('bcrypt');
 const { connect } = require('../connect');
-const { Collection, ObjectId, MongoUnexpectedServerResponseError } = require("mongodb");
-const { adminEmail } = require("../config");
-
-
+const { ObjectId } = require("mongodb");
 
 module.exports = {
 
-  createAdminUser: async (adminUser) => {
-   try {
-    const db = await connect();
-    const usersCollection = db.connect('users');
-   
-    const foundAdmin = await usersCollection.findOne({ role: 'admin'});
+  createAdminUser: async (adminUser, res) => {
+    try {
+      const db = await connect();
+      const usersCollection = db.collection('users');
 
-    if(!foundAdmin){
-      //aqui tengo que insertar tambien la pw? 
-      const hashedPassword = await bycrypt.hash(adminUser.password, 10);
-      const adminUserToInsert = {
-      ...adminUser,
-      role: 'admin',
-      password: hashedPassword,
+      const foundAdmin = await usersCollection.findOne({ role: 'admin' });
+
+      if (!foundAdmin) {
+        const hashedPassword = await bcrypt.hash(adminUser.password, 10);
+        const adminUserToInsert = {
+          ...adminUser,
+          role: 'admin',
+          password: hashedPassword,
+        }
+
+        await usersCollection.insertOne(adminUserToInsert);
+        res.status(201).json('Admin user created successfully');
+      } else {
+        return res.status(400).json('Admin user already exists');
       }
-
-      const result = await usersCollection.insertOne(adminUserToInsert);
-      res.status(200).send('User creado') 
-  } else {
-    return res.status(400).send('Ya existe este usuario');
-  }
-  }
-  catch(error) {
-    console.log('Error creando el admin user');
-    return res.status(400).send('Ya existe el usuario');
-   }
+    } catch (error) {
+      console.error('Error creating admin user:', error);
+      return res.status(500).json('Internal server error');
+    }
   },
 
-  postUser: async (req, resp, next) => {
+  postUser: async (req, res) => {
     try {
       const { email, password, role } = req.body;
-      
 
       if (!email || !password) {
-        return resp.status(400).send('Espacios vacios, por favor escribir email y/o password validos');
+        return res.status(400).json('Email and password are required');
       }
 
       const db = await connect();
@@ -51,110 +44,126 @@ module.exports = {
 
       const validRole = await roleCollection.findOne({ role });
       if (!validRole) {
-        return resp.status(400).send('El rol no es valido');
-      };
+        return res.status(400).json('Invalid role');
+      }
 
       const existingEmail = await usersCollection.findOne({ email });
       if (existingEmail) {
-        return resp.status(400).send('El email ya existe')      
-      };
+        return res.status(400).json('Email already exists');
+      }
 
-      const creatingPassword = await bycrypt.hash(password, 10); //salt rounds 10
+      const hashedPassword = await bcrypt.hash(password, 10);
       const userCreated = await usersCollection.insertOne({
         email,
-        password: creatingPassword,
+        password: hashedPassword,
         role,
       });
 
-      const { insertedId } = userCreated;
-      resp.json({
-        _id: insertedId,
+      res.status(201).json({
+        _id: userCreated.insertedId,
         email,
         role,
       });
     } catch (error) {
-      console.error('Error:', error);
-      return resp.status(500).send('Error, algo salio mal');
+      console.error('Error creating user:', error);
+      return res.status(500).json('Internal server error');
     }
   },
 
-  getUser: async (req, resp, next) => {
-    try {  
+  getUser: async (req, res) => {
+    try {
       const db = await connect();
       const page = parseInt(req.query.page) || 0;
-      const userPerPage = 10;
+      const usersPerPage = 10;
       const users = await db.collection('users')
-      .find()
-      .sort({ id: 1 })
-      .skip(page * userPerPage)
-      .limit(userPerPage)
-      .toArray()
+        .find()
+        .sort({ _id: 1 })
+        .skip(page * usersPerPage)
+        .limit(usersPerPage)
+        .toArray();
 
-      resp.status(200).json(users);
-      } catch(error) {
-        console.log(error);
-      resp.status(500).send('Algo salio mal');
+      res.status(200).json(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json('Internal server error');
     }
   },
 
-  getUserById: async (req, res, next) =>{
-    try{
+  getUserById: async (req, res) => {
+    try {
       const db = await connect();
       const usersCollection = db.collection('users');
       const userID = req.params.id;
-      //aqui validamos el id
-      if(!ObjectId.isValid(userID)){
-        return res.status(400).send('ID no es valido');
+
+      if (!ObjectId.isValid(userID)) {
+        return res.status(400).json('Invalid user ID');
       }
 
-      const user = await usersCollection.findOne({ _id: new ObjectId(userID)});   
+      const user = await usersCollection.findOne({ _id: new ObjectId(userID) });
 
-       if (!user) {
-        return res.status(404).send('Error no hay usuario con ese ID')
-       } else {
+      if (!user) {
+        return res.status(404).json('User not found');
+      } else {
         return res.status(200).json(user);
-       }
-   }catch (error) {
-      console.error('Error obteniendo el usuario por ID:', error);
-      return res.status(500).send('Error, algo paso, intente de nuevo');
+      }
+    } catch (error) {
+      console.error('Error fetching user by ID:', error);
+      return res.status(500).json('Internal server error');
     }
   },
 
-  updateUser: async (req, resp, next) => {  //AQUI MANEJAMOS EL CRUD
-    // TODO: Implement the necessary function to fetch the `users` collection or table
-      //acceder a la base datos
-      //acceder a la collection
-      // acceder a los parametros con los roles o IDs?
-      //validar el input 
-      //autenticar y autorizar segun el id. 
-      //digamos que quiero actualizar el email de una usuaria, 
-      //encontrar el usuario por ID
-      //actualizar el usuario info 
-      //handle responde
+  updateUser: async (req, res) => {
     try {
       const db = await connect();
       const usersCollection = db.collection('users');
       const uid = req.params.id;
       const { email, password, role } = req.body;
-      const authUser = req.user;
 
+      if (!ObjectId.isValid(uid)) {
+        return res.status(400).json('Invalid user ID');
+      }
 
-    if (id !== newUserData) {
-      return res.send('Error, no coinciden los datos')
-    } 
-    return newUserData.isAuthenticated
+      const updates = {};
+      if (email) updates.email = email;
+      if (password) updates.password = await bcrypt.hash(password, 10);
+      if (role) updates.role = role;
 
-     
+      const result = await usersCollection.updateOne(
+        { _id: new ObjectId(uid) },
+        { $set: updates }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json('User not found');
+      }
+
+      res.status(200).json('User updated successfully');
     } catch (error) {
-      
+      console.error('Error updating user:', error);
+      res.status(500).json('Internal server error');
     }
-     
-
   },
 
-  deleteUser: (req, resp, next) => {  //AQUI MANEJAMOS EL CRUD
-    // TODO: Implement the necessary function to fetch the `users` collection or table
+  deleteUser: async (req, res) => {
+    try {
+      const db = await connect();
+      const usersCollection = db.collection('users');
+      const uid = req.params.id;
 
+      if (!ObjectId.isValid(uid)) {
+        return res.status(400).json('Invalid user ID');
+      }
+
+      const result = await usersCollection.deleteOne({ _id: new ObjectId(uid) });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json('User not found');
+      }
+
+      res.status(200).json('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json('Internal server error');
+    }
   },
-
-}
+};

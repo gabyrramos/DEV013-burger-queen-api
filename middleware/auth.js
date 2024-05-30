@@ -17,37 +17,38 @@ module.exports = (secret) => (req, resp, next) => {
       return next(403);
     }
     console.log('aqui el decoded token', decodedToken);
-    req.uid = decodedToken._id;
+    req.user = {
+     id: decodedToken.id,
+     role: decodedToken.role
+    };
     console.log(req.uid);
   });
 
   next();
 };
 
-module.exports.isAuthenticated = (req) => {
-  console.log(req.id)
-  return req.uid ? true : false;
-  // TODO: Decide based on the request information whether the user is authenticated
-
+module.exports.isAuthenticated = (req, res, next) => {
+  console.log(req.user);
+  return req.user != null ;
 };
 
 module.exports.isAdmin = (req, res, next) => {
-  // TODO: Decide based on the request information whether the user is an admin
-  //const { role } = req.user;
-  return req.role === "admin" ? true : false;
+  return req.user && req.user.role === 'admin'
+  
 };
 
-module.exports.requireAuth = (req, resp, next) => (
-  (!module.exports.isAuthenticated(req, resp, next))
-    ? next(401)
-    : next()
-);
+module.exports.requireAuth = (req, res, next) => {
+  if (!module.exports.isAuthenticated(req, res, next)) {
+    return res.status(401).send('No autorizado');
+  }
+  next();
+};
 
-module.exports.requireAdmin = (req, resp, next) => (
-  // eslint-disable-next-line no-nested-ternary
-  (!module.exports.isAuthenticated(req, resp, next))
-    ? next(401)
-    : (!module.exports.isAdmin(req, resp, next))
-      ? next(403)
-      : next()
-);
+module.exports.requireAdmin = (req, res, next) => {
+  if (!module.exports.isAuthenticated(req, res, next)) {
+    return res.status(401).send('No autorizado');
+  } else if (!module.exports.isAdmin(req, res, next)) {
+    return res.status(403).send('Accesso Restringido');
+  }
+  next();
+};

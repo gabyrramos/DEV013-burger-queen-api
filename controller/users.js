@@ -35,17 +35,17 @@ module.exports = {
       const { email, password, role } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json('Email and password are required');
+        return res.status(400).json('Email o password son invalidos');
       }
 
       const db = await connect();
       const roleCollection = db.collection('roles');
       const usersCollection = db.collection('users');
 
-      const validRole = await roleCollection.findOne({ role });
-      if (!validRole) {
-        return res.status(400).json('Invalid role');
-      }
+      // const validRole = await roleCollection.findOne({ role });
+      // if (!validRole) {
+      //   return res.status(400).json('Invalid role');
+      // }
 
       const existingEmail = await usersCollection.findOne({ email });
       if (existingEmail) {
@@ -62,11 +62,12 @@ module.exports = {
       res.status(201).json({
         _id: userCreated.insertedId,
         email,
+        password,
         role,
       });
     } catch (error) {
-      console.error('Error creating user:', error);
-      return res.status(500).json('Internal server error');
+      console.error('Error creando usario:', error);
+      return res.status(500).json('Algo salio mal');
     }
   },
 
@@ -84,8 +85,8 @@ module.exports = {
 
       res.status(200).json(users);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json('Internal server error');
+      console.error('Error buscando usuarios:', error);
+      res.status(500).json('Algo salio mal');
     }
   },
 
@@ -96,19 +97,19 @@ module.exports = {
       const userID = req.params.id;
 
       if (!ObjectId.isValid(userID)) {
-        return res.status(400).json('Invalid user ID');
+        return res.status(400).json('User ID invalido');
       }
 
       const user = await usersCollection.findOne({ _id: new ObjectId(userID) });
 
       if (!user) {
-        return res.status(404).json('User not found');
+        return res.status(404).json('User no encontrado');
       } else {
         return res.status(200).json(user);
       }
     } catch (error) {
-      console.error('Error fetching user by ID:', error);
-      return res.status(500).json('Internal server error');
+      console.error('Error buscando usuario por ID:', error);
+      return res.status(500).json('Algo salio mal');
     }
   },
 

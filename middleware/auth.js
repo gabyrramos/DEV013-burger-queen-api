@@ -19,6 +19,7 @@ module.exports = (secret) => (req, resp, next) => {
     console.log('aqui el decoded token', decodedToken);
     req.user = {
      id: decodedToken.id,
+     email: decodedToken.email,
      role: decodedToken.role,
     };
     console.log(req.uid);

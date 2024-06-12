@@ -20,7 +20,7 @@ module.exports = (app, nextMain) => {
       const database = await connect();
       const collection = database.collection('users');
 
-      const user = await collection.findOne({ email });
+      const user  = await collection.findOne({ email });
       console.log('router user', user);
       if (!user) {
         return resp.status(404).send('Email o password incorrectos');
@@ -31,10 +31,10 @@ module.exports = (app, nextMain) => {
       }
       // If they match, send an access token created with JWT
       const token = jwt.sign({ id: user._id, email: user.email, role: user.role}, secret );
-      resp.json({ token });
+      resp.status(200).json({ token });
     } catch (error) {
       console.error(error);
-      return next(500);
+      return resp.status(500).send('Internal error');
     }
   });
   return nextMain();

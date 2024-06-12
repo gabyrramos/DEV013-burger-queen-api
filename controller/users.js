@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const { connect } = require('../connect');
 const { ObjectId } = require("mongodb");
 const jwt = require('jsonwebtoken');
+const { isAdmin } = require('../middleware/auth');
 
 module.exports = {
 
@@ -33,37 +34,48 @@ module.exports = {
 
   postUser: async (req, res) => {
     try {
+
       const { email, password, role } = req.body;
+      const db = await connect();
+      const usersCollection = db.collection('users');
 
       if (!email || !password) {
         return res.status(400).json('Email o password son invalidos');
       }
 
-      const db = await connect();
-      const roleCollection = db.collection('roles');
-      const usersCollection = db.collection('users');
+
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!regex.test(email)) {
+        return res.status(400).json('Correo electronico no es valido');
+      }
+      if (password.length < 6) {
+        return res.status(400).json('La contraseña debe tener al menos 6 caracteres');
+      }
+
+
 
       // const validRole = await roleCollection.findOne({ role });
       // if (!validRole) {
       //   return res.status(400).json('Invalid role');
       // }
 
-      const existingEmail = await usersCollection.findOne({ email });
-      if (existingEmail) {
-        return res.status(400).json('Email already exists');
-      }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+      const existingEmail = await usersCollection.findOne({ email });
+      if (existingEmail) {
+        return res.status(403).json('Email already exists');
+      }
+
       const userCreated = await usersCollection.insertOne({
         email,
         password: hashedPassword,
         role,
       });
-
+      console.log(userCreated.insertedId);
       res.status(200).json({
         _id: userCreated.insertedId,
         email,
-        password,
         role,
       });
     } catch (error) {
@@ -94,39 +106,52 @@ module.exports = {
   getUserById: async (req, res) => {
     console.log('Get user by id');
     try {
+      const { uid } = req.params;
       const db = await connect();
       const usersCollection = db.collection('users');
-      const userID = req.params.id;
-      console.log('Get user by ID:', userID, req.user._id, req.user.role);
-      if(!req.user){
-        console.error('Autenticacion requerida');
-        return res.status(403).json('No autenticado');
+
+      console.log('Get user by ID:', uid);
+      let filterUser;
+      console.log(req.user.role);
+      if (req.user.role !== "admin") {
+        if (uid !== req.user.id && uid !== req.user.email) {
+          return res.status(403).json('Usuario no tiene permisos para ver informacion');
+        }
       }
 
-      if (!ObjectId.isValid(userID)) {
-        console.error('Usuario invalido:', userID);
-        return res.status(403).json('User ID invalido');
+      if (ObjectId.isValid(uid)) {
+        filterUser = await usersCollection.findOne({ _id: new ObjectId(uid) })
+      }
+      else {
+        filterUser = await usersCollection.findOne({ email: uid });
       }
 
-      const userObjectId = new ObjectId(userID);
-      const user = await usersCollection.findOne({_id: userObjectId});
 
-      if (!user) {
-        console.error('Usuario no encontrado:', userID);
+      // if(!req.user){
+      //   console.error('Autenticacion requerida');
+      //   return res.status(403).json('No autenticado');
+      // }
+
+      // if (!ObjectId.isValid(userID)) {
+      //   console.error('Usuario invalido:', userID);
+      //   return res.status(403).json('User ID invalido');
+      // }
+
+      if (!filterUser) {
+
         return res.status(404).json('User no encontrado');
-      // } else {
-      //   return res.status(200).json(user);
-      }
-      console.log('Usuario encontrado:', user);
-
-      //const requestUserId = toObjectId(req.user._id);
-
-      if (req.user._id !== userID || req.user.role !== 'admin'){
-        console.error('Permiso denegado:', req.user._id);
-        return res.status(403).json('No tienes permiso para acceder');
+      } else {
+        return res.status(200).json(filterUser);
       }
 
-      return res.status(200).json(user);
+
+      // //const requestUserId = toObjectId(req.user._id);
+
+      // if (req.user._id !== userID || req.user.role !== 'admin'){
+      //   console.error('Permiso denegado:', req.user._id);
+      //   return res.status(403).json('No tienes permiso para acceder');
+      // }
+
     } catch (error) {
       console.error('Error buscando usuario por ID:', error);
       return res.status(500).json('Algo salio mal');
@@ -135,95 +160,102 @@ module.exports = {
 
   updateUser: async (req, res) => {
     try {
+      const { email, password, role } = req.body;
+      const { uid } = req.params;
       const db = await connect();
       const usersCollection = db.collection('users');
-      const uid = req.params.id;
-      const { email, password, role } = req.body;
 
-  
-      if (!req.user) {
-          return res.status(401).json('No autenticado');
+      let filterUser;
+      console.log(req.user.role);
+      if (req.user.role !== "admin") {
+        if (uid !== req.user.id && uid !== req.user.email) {
+          return res.status(403).json('Usuario no tiene permisos para ver informacion');
+        }
       }
 
-      if (!ObjectId.isValid(uid)) {
-          return res.status(400).json('User ID invalido');
+      if (ObjectId.isValid(uid)) {
+        filterUser = await usersCollection.findOne({ _id: new ObjectId(uid) })
+      }
+      else {
+        filterUser = await usersCollection.findOne({ email: uid });
       }
 
-      if (!email && !password && !role) {
-          return res.status(400).json('No hay propiedades para actualizar');
+      if (!filterUser) {
+        return res.status(404).json('User no encontrado');
       }
 
-      const isOwner = req.user._id === uid;
-      const isAdmin = req.user.role === 'admin';
+      if (Object.keys(req.body).length === 0) {
+        return res.status(400).json('No se envio ninguna informacion para modificar');
+      }
+      let hashPassword;
+      if (password) {
+        hashPassword = await bcrypt.hash(password, 10);
 
-      if (!isOwner && !isAdmin) {
-          return res.status(403).json('No tienes permiso para actualizar este usuario');
+      };
+      console.log('Cambiando rol', role);
+      console.log('Probando role', filterUser.role);
+      if (role !== filterUser.role) {
+        if (!isAdmin(req)) {
+          return res.status(403).json('El usuario no tiene permiso para cambiar de rol');
+        }
       }
 
-      if (!isAdmin && role) {
-          return res.status(403).json('No puedes cambiar tu propio rol');
-      }
-
-      const updates = {};
-      if (email) updates.email = email;
-      if (password) updates.password = await bcrypt.hash(password, 10);
-      if (role) updates.role = role;
+      // if (role) updates.role = role;
 
       const result = await usersCollection.updateOne(
-          { _id: new ObjectId(uid) },
-          { $set: updates }
+        filterUser,
+        {
+          $set: {
+            email: email,
+            password: hashPassword,
+            role: role
+          }
+        }
       );
 
-      if (result.matchedCount === 0) {
-          return res.status(404).json('User no encontrado');
+      if (result.modifiedCount === 0) {
+        return res.status(400).json('No realizo ningun cambio');
       }
 
-      res.status(200).json('Actualizacion exitosa');
-  } catch (error) {
+      res.status(200).json(result);
+    } catch (error) {
       console.error('Error actualizando user:', error);
       res.status(500).json('Error interno');
-  }
-},
+    }
+  },
 
   deleteUser: async (req, res) => {
     try {
+      const {uid} = req.params;
       const db = await connect();
       const usersCollection = db.collection('users');
-      const uid = req.params.id;
 
-      if (!req.user) {
-          return res.status(401).json('No autenticado');
+      let filterUser;
+      console.log(req.user.role);
+      if (req.user.role !== "admin") {
+        if (uid !== req.user.id && uid !== req.user.email) {
+          return res.status(403).json('Usuario no tiene permisos para ver informacion');
+        }
       }
 
-      if (!ObjectId.isValid(uid)) {
-          return res.status(403).json('Invalid user ID');
+      if (ObjectId.isValid(uid)) {
+        filterUser = await usersCollection.findOne({ _id: new ObjectId(uid) })
+      }
+      else {
+        filterUser = await usersCollection.findOne({ email: uid });
       }
 
-      const userToDelete = await usersCollection.findOne({ _id: new ObjectId(uid) });
-      if (!userToDelete) {
-      return res.status(404).json('User no encontrado');
-    }
-
-      const isOwner = req.user._id.toString() === uid;
-      const isAdmin = req.user.role === 'admin';
-      if (!isAdmin) {
-          return res.status(404).json('No tienes permiso para eliminar este usuario');
+      if (!filterUser) {
+        return res.status(404).json('User no encontrado');
       }
 
-      if (!isOwner) {
-        return res.status(404).json('No tienes permiso para eliminar este usuario');
-    }
 
-      const result = await usersCollection.deleteOne({ _id: new ObjectId(uid) });
-
-      if (result.deletedCount === 0) {
-          return res.status(404).json('User no encontrado');
-      }
+      const result = await usersCollection.deleteOne(filterUser);
 
       res.status(200).json('User eliminado');
-  } catch (error) {
+    } catch (error) {
       console.error('Error eliminando user:', error);
       res.status(500).json('Error interno');
+    }
   }
-}
 };
